@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 
 export const useAudioRecorder = () => {
   const [isRecording, setIsRecording] = useState(false);
-  const [auditData, setAuditData] = useState<{ transcript: string, audit: string } | null>(null);
+  const [auditData, setAuditData] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);

@@ -72,9 +72,26 @@ export default function Home() {
               </div>
               <div className="border-t pt-4 flex items-start gap-4">
                 <Activity className="w-5 h-5 text-teal-600 mt-1 shrink-0" />
-                <div>
-                  <h3 className="text-sm font-semibold text-teal-700 uppercase tracking-wider">Linguistic Audit</h3>
-                  <p className="text-gray-700 mt-1 leading-relaxed">{auditData.audit}</p>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-teal-700 uppercase tracking-wider flex items-center justify-between">
+                    Linguistic Audit
+                    {auditData.equity_score !== undefined && (
+                      <span className="text-xs bg-teal-100 text-teal-800 px-2 py-1 rounded-full border border-teal-200">Score: {Number(auditData.equity_score).toFixed(1)}</span>
+                    )}
+                  </h3>
+                  {auditData.recommendation ? (
+                    <>
+                      <p className="text-gray-700 mt-2 leading-relaxed">{auditData.recommendation}</p>
+                      {auditData.bias_report && (
+                        <div className="mt-4 text-sm text-gray-600 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                          <p><strong>Detected Accent:</strong> {auditData.bias_report.detected_accent}</p>
+                          <p className="mt-1"><strong>Risk:</strong> <span className="capitalize">{auditData.bias_report.misinterpretation_risk}</span></p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-gray-700 mt-1 leading-relaxed">{auditData.audit}</p>
+                  )}
                 </div>
               </div>
             </motion.div>

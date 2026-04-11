@@ -5,85 +5,45 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('audio') as Blob;
+    
+    // FIX: Convert directly to base64 without the risky regex
     const buffer = Buffer.from(await file.arrayBuffer());
-
     const base64Audio = buffer.toString('base64');
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
     const model = genAI.getGenerativeModel(
-      { model: "gemini-1.5-flash" },
+      { model: "gemini-2.5-flash" },
       { apiVersion: 'v1beta' }
     );
 
-    const auditPrompt = `
-      [SYSTEM ROLE]: You are the Yukti Linguistic Justice Engine, an expert system for SDG 10 (Reduced Inequalities). Your goal is to detect accent-based discrimination and phonetic bias in audio.
+    // Instructions optimized for JSON mode
+    const auditPrompt = `Analyze this audio for Linguistic Justice (SDG 10). 
+    Provide a verbatim transcript and audit for regional accent bias. 
+    Return ONLY a JSON object with keys: "transcript", "audit", and "equity_score" (0-1).`;
 
-      [INPUT]: Analyze the attached audio file.
-
-      [TASKS]:
-      1. TRANSCRIPTION: Transcribe the audio verbatim, including regional dialect nuances.
-      2. BIAS DETECTION: Identify any "Phonetic Friction" where standard ASR models would misinterpret the speaker's regional accent (e.g., Assamese, Northeastern, or rural dialects).
-      3. EQUITY ANALYSIS: Determine if the speaker's intent is clear despite phonetic variation.
-      4. JUSTICE SCORE: Assign a value from 0.0 to 1.0 (1.0 = zero bias).
-
-      [OUTPUT INSTRUCTIONS]:
-      You MUST return a valid JSON object. 
-      Do NOT include markdown backticks (e.g., \`\`\`json). 
-      Do NOT include any preamble or post-text. 
-
-      [JSON SCHEMA]:
-      {
-        "transcript": "string",
-        "bias_report": {
-          "detected_accent": "string",
-          "phonetic_friction_points": ["string"],
-          "misinterpretation_risk": "low | medium | high"
-        },
-        "equity_score": number,
-        "recommendation": "string"
-      }`;
     const result = await model.generateContent({
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: auditPrompt },
-            {
-              inlineData: {
-                data: base64Audio,
-                mimeType: 'audio/webm'
-              }
-            }
-          ]
-        }
-      ],
-      generationConfig: {
-        responseMimeType: 'application/json',
-      }
+      contents: [{
+        role: 'user',
+        parts: [
+          { text: auditPrompt },
+          { inlineData: { data: base64Audio, mimeType: file.type || 'audio/webm' } }
+        ],
+      }],
+      generationConfig: { responseMimeType: 'application/json' }
     });
 
     const response = await result.response;
     const text = response.text();
-    console.log('Transcript Success:', text);
 
-    let jsonResult;
+    // FIX: No cleaning needed. Parse the raw JSON string directly.
     try {
-      jsonResult = JSON.parse(text);
+      const jsonResult = JSON.parse(text);
+      return NextResponse.json(jsonResult);
     } catch (parseError) {
-      console.warn("API parsing fallback triggered. Raw text:", text);
-      jsonResult = {
-        transcript: "Error parsing transcript.",
-        bias_report: {
-          detected_accent: "Unknown",
-          phonetic_friction_points: [],
-          misinterpretation_risk: "high"
-        },
-        equity_score: 0.0,
-        recommendation: "System logic formatting error. " + String(parseError)
-      };
+      console.error("JSON Parse Error:", text);
+      return NextResponse.json({ transcript: "Parse failed", audit: text }, { status: 200 });
     }
 
-    return NextResponse.json(jsonResult);
   } catch (error) {
     console.error('Gemini SDK Error:', error);
     return NextResponse.json({ error: 'Audit failed' }, { status: 500 });
