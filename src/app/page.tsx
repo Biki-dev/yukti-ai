@@ -66,7 +66,58 @@ export default function Home() {
                 <FileText className="w-5 h-5 text-teal-600 mt-1 shrink-0" />
                 <div>
                   <h3 className="text-sm font-semibold text-teal-700 uppercase tracking-wider">Transcript</h3>
-                  <p className="text-gray-700 mt-1 italic">&quot;{auditData.transcript}&quot;</p>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {auditData.word_risks && auditData.word_risks.length > 0
+                      ? auditData.word_risks.map((item: { word: string; risk: number; language?: string }, index: number) => {
+                          const risk = item.risk;
+                          const languageMap: Record<string, string> = {
+                            en: 'English',
+                            hi: 'Hindi',
+                            as: 'Assamese',
+                            other: 'Other'
+                          };
+                          const languageLabel = item.language ? (languageMap[item.language] || item.language) : 'Unknown';
+                          let bg = 'bg-emerald-100 text-emerald-800';
+                          let title = 'Low risk';
+                          if (risk >= 0.65) {
+                            bg = 'bg-red-100 text-red-800';
+                            title = `High bias risk (${(risk * 100).toFixed(0)}%) • ${languageLabel}`;
+                          } else if (risk >= 0.35) {
+                            bg = 'bg-amber-100 text-amber-800';
+                            title = `Moderate bias risk (${(risk * 100).toFixed(0)}%) • ${languageLabel}`;
+                          } else {
+                            title = `Low bias risk (${(risk * 100).toFixed(0)}%) • ${languageLabel}`;
+                          }
+                          return (
+                            <span
+                              key={index}
+                              title={title}
+                              className={`px-2 py-0.5 rounded text-sm font-medium cursor-default transition-all hover:scale-105 ${bg}`}
+                            >
+                              {item.word}
+                            </span>
+                          );
+                        })
+                      : <p className="text-gray-700 italic">&quot;{auditData.transcript}&quot;</p>
+                    }
+                  </div>
+                  {auditData.word_risks && auditData.word_risks.length > 0 && (
+                    <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100">
+                      <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Bias Risk</span>
+                      <span className="flex items-center gap-1.5 text-xs text-emerald-700">
+                        <span className="w-2.5 h-2.5 rounded-sm bg-emerald-100 inline-block border border-emerald-200" />
+                        Low
+                      </span>
+                      <span className="flex items-center gap-1.5 text-xs text-amber-700">
+                        <span className="w-2.5 h-2.5 rounded-sm bg-amber-100 inline-block border border-amber-200" />
+                        Moderate
+                      </span>
+                      <span className="flex items-center gap-1.5 text-xs text-red-700">
+                        <span className="w-2.5 h-2.5 rounded-sm bg-red-100 inline-block border border-red-200" />
+                        High
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="border-t pt-4 flex items-start gap-4">
