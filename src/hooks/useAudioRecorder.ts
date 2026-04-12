@@ -48,70 +48,78 @@ export const useAudioRecorder = () => {
 
     mediaRecorder.current.ondataavailable = (e) => chunks.current.push(e.data);
     mediaRecorder.current.onstop = async () => {
-      setIsProcessing(true);
-      setPipelineStage(0);
       const blob = new Blob(chunks.current, { type: 'audio/webm' });
-      
-      const formData = new FormData();
-      formData.append('audio', blob, 'audio.webm');
-
-      try {
-        const response = await fetch('/api/audit', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok || !response.body) {
-          const errorResult = await response.json().catch(() => ({}));
-          console.error('Backend returned an error. Wait aborted:', errorResult);
-          setApiError('Failed to process audio. API quota may be exceeded.');
-          return;
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let bufferText = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          bufferText += decoder.decode(value, { stream: true });
-          const lines = bufferText.split('\n');
-          bufferText = lines.pop() ?? '';
-
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            try {
-              const payload = JSON.parse(line);
-
-              if (payload.type === 'stage' && typeof payload.stage === 'number') {
-                setPipelineStage(payload.stage);
-              }
-
-              if (payload.type === 'result' && payload.data) {
-                setAuditData(payload.data);
-              }
-
-              if (payload.type === 'error') {
-                console.error('Audit pipeline error:', payload.message);
-                setApiError(payload.message || 'Audit pipeline error');
-              }
-            } catch (parseError) {
-              console.warn('Skipping non-JSON pipeline line:', line, parseError);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error sending audio to audit:", error);
-        setApiError('Network error. Please try again.');
-      } finally {
-        setIsProcessing(false);
-      }
+      await processAudioBlob(blob, 'audio/webm');
     };
 
     mediaRecorder.current.start();
     setIsRecording(true);
+  };
+
+  const processAudioBlob = async (blob: Blob, processType: string = 'audio/webm') => {
+    setIsProcessing(true);
+    setPipelineStage(0);
+    setAuditData(null);
+    setRepairData(null);
+    setApiError(null);
+    
+    const formData = new FormData();
+    const ext = processType.includes('mp3') ? 'mp3' : processType.includes('wav') ? 'wav' : 'webm';
+    formData.append('audio', blob, `audio.${ext}`);
+
+    try {
+      const response = await fetch('/api/audit', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok || !response.body) {
+        const errorResult = await response.json().catch(() => ({}));
+        console.error('Backend returned an error. Wait aborted:', errorResult);
+        setApiError('Failed to process audio. API quota may be exceeded.');
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let bufferText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        bufferText += decoder.decode(value, { stream: true });
+        const lines = bufferText.split('\n');
+        bufferText = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const payload = JSON.parse(line);
+
+            if (payload.type === 'stage' && typeof payload.stage === 'number') {
+              setPipelineStage(payload.stage);
+            }
+
+            if (payload.type === 'result' && payload.data) {
+              setAuditData(payload.data);
+            }
+
+            if (payload.type === 'error') {
+              console.error('Audit pipeline error:', payload.message);
+              setApiError(payload.message || 'Audit pipeline error');
+            }
+          } catch (parseError) {
+            console.warn('Skipping non-JSON pipeline line:', line, parseError);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error sending audio to audit:", error);
+      setApiError('Network error. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const stopRecording = () => {
@@ -169,5 +177,5 @@ export const useAudioRecorder = () => {
     }
   };
 
-  return { isRecording, startRecording, stopRecording, auditData, isProcessing, pipelineStage, repairData, isGeneratingRepair, generateContextualRepair, startDemo, apiError };
+  return { isRecording, startRecording, stopRecording, auditData, isProcessing, pipelineStage, repairData, isGeneratingRepair, generateContextualRepair, startDemo, apiError, processAudioBlob };
 };

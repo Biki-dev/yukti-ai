@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Mic, ShieldCheck, Globe, FileText, Activity, Zap, BarChart3 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Mic, ShieldCheck, Globe, FileText, Activity, Zap, BarChart3, Upload, Download } from 'lucide-react';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -141,7 +141,7 @@ function PipelineVisualizer({
       <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px' }}>
         {/* Connector lines */}
         <div style={{ position: 'absolute', left: 60, right: 60, top: '50%', transform: 'translateY(-50%)', height: 1, background: 'rgba(255,255,255,0.06)', zIndex: 0 }} />
-        
+
         {PIPELINE_STAGES.map((stage, i) => {
           const isActive = activeStage === stage.id;
           const isDone = completedStages.includes(stage.id);
@@ -171,8 +171,8 @@ function PipelineVisualizer({
                   background: isActive
                     ? 'rgba(20,184,166,0.06)'
                     : isDone
-                    ? 'rgba(20,184,166,0.03)'
-                    : 'rgba(0,0,0,0.02)',
+                      ? 'rgba(20,184,166,0.03)'
+                      : 'rgba(0,0,0,0.02)',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -419,18 +419,18 @@ function EquityReport({ auditData }: { auditData: any }) {
                 const bg = risk >= 0.65
                   ? 'rgba(239,68,68,0.15)'
                   : risk >= 0.35
-                  ? 'rgba(245,158,11,0.15)'
-                  : 'rgba(20,184,166,0.1)';
+                    ? 'rgba(245,158,11,0.15)'
+                    : 'rgba(20,184,166,0.1)';
                 const border = risk >= 0.65
                   ? 'rgba(239,68,68,0.3)'
                   : risk >= 0.35
-                  ? 'rgba(245,158,11,0.3)'
-                  : 'rgba(20,184,166,0.2)';
+                    ? 'rgba(245,158,11,0.3)'
+                    : 'rgba(20,184,166,0.2)';
                 const color = risk >= 0.65
                   ? 'var(--red)'
                   : risk >= 0.35
-                  ? 'var(--amber)'
-                  : 'var(--teal)';
+                    ? 'var(--amber)'
+                    : 'var(--teal)';
                 return (
                   <span
                     key={i}
@@ -527,6 +527,106 @@ function EquityReport({ auditData }: { auditData: any }) {
   );
 }
 
+// ─── Official PDF Report Template ──────────────────────────────────────────────
+function OfficialPdfReport({ auditData, repairData }: { auditData: any, repairData: any }) {
+  if (!auditData) return null;
+  const score = Number(auditData.equity_score ?? 0);
+  const displayNum = Math.round(score * 100);
+  const scoreColor = score >= 0.7 ? '#14b8a6' : score >= 0.4 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div id="official-pdf-report" style={{
+      position: 'fixed', left: '-9999px', top: 0,
+      width: 800, padding: 48,
+      background: '#ffffff', color: '#111827',
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    }}>
+      {/* Header */}
+      <div style={{ borderBottom: '2px solid #e5e7eb', paddingBottom: 24, marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: '-0.02em', color: '#111827' }}>
+            OFFICIAL LINGUISTIC EQUITY REPORT
+          </h1>
+          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 8, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            Model: Gemini 2.5 Flash / Vertex AI
+          </div>
+        </div>
+        <div style={{ textAlign: 'right', fontSize: 11, color: '#6b7280', fontFamily: 'monospace' }}>
+          <div>SESSION ID</div>
+          <div style={{ fontWeight: 600, color: '#374151', marginTop: 4 }}>YUK-{Math.floor(1000 + Math.random() * 9000)}-A</div>
+          <div style={{ marginTop: 8 }}>{new Date().toLocaleDateString()}</div>
+        </div>
+      </div>
+
+      {/* Score */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: 24, background: '#f9fafb', borderRadius: 12, border: '1px solid #e5e7eb', marginBottom: 32 }}>
+        <div style={{ width: 80, height: 80, borderRadius: '50%', border: `6px solid ${scoreColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: 28, fontWeight: 700, color: scoreColor }}>{displayNum}</span>
+        </div>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: '#374151', marginBottom: 4 }}>
+            Systemic Fairness Scorecard
+          </div>
+          <div style={{ fontSize: 13, color: '#6b7280' }}>
+            A composite evaluation mapping phonetic accuracy, lexical fairness, and bias resilience.
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 24, marginBottom: 32 }}>
+        {/* Identified Dialect */}
+        <div style={{ padding: 20, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', marginBottom: 8 }}>
+            Identified Dialect Profile
+          </div>
+          <div style={{ fontSize: 14, color: '#111827', lineHeight: 1.5 }}>
+            {auditData.audit?.accent_identified || 'Standard English mapping'}
+          </div>
+        </div>
+        {/* Bias Risk */}
+        <div style={{ padding: 20, border: '1px solid #e5e7eb', borderRadius: 8, background: '#fef2f2', borderColor: '#fecaca' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#b91c1c', textTransform: 'uppercase', marginBottom: 8 }}>
+            Phonetic Bias Risk
+          </div>
+          <div style={{ fontSize: 13, color: '#991b1b', lineHeight: 1.5 }}>
+            {auditData.audit?.potential_bias_analysis || auditData.xai_explanation || 'No substantial risk metrics detected.'}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12 }}>Equitable Transcript Generation</div>
+        {repairData ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', marginBottom: 6 }}>Original Capture</div>
+              <div style={{ padding: 16, background: '#f3f4f6', borderRadius: 6, fontSize: 13, color: '#4b5563', fontStyle: 'italic' }}>
+                &quot;{repairData.original}&quot;
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: '#14b8a6', textTransform: 'uppercase', marginBottom: 6 }}>Contextual Repair</div>
+              <div style={{ padding: 16, background: '#f0fdfa', border: '1px solid #ccfbf1', borderRadius: 6, fontSize: 13, color: '#115e59' }}>
+                &quot;{repairData.repaired}&quot;
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding: 16, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, color: '#111827' }}>
+            &quot;{auditData.transcript}&quot;
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop: 64, paddingTop: 24, borderTop: '1px solid #e5e7eb', textAlign: 'center' }}>
+        <div style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Generated by Yukti AI – Promoting SDG 10.3 Linguistic Inclusion.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function Home() {
   const {
@@ -541,8 +641,50 @@ export default function Home() {
     repairData,
     isGeneratingRepair,
     generateContextualRepair,
+    processAudioBlob,
   } = useAudioRecorder();
   const isComplete = !isProcessing && auditData !== null;
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processAudioBlob(file, file.type);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const { jsPDF } = await import('jspdf');
+
+      const element = document.getElementById('official-pdf-report');
+      if (!element) return;
+
+      const canvas = await html2canvas(element, { 
+        scale: 2,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+        x: 0,
+        y: 0 
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width / 2, canvas.height / 2]
+      });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
+      pdf.save('Linguistic_Justice_Audit_Report.pdf');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   const [completedStages, setCompletedStages] = useState<number[]>([]);
   const [traceLines, setTraceLines] = useState<string[]>([]);
@@ -598,18 +740,6 @@ export default function Home() {
         zIndex: 50,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <a href="/demo" style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            fontSize: 12, color: 'var(--text-secondary)',
-            textDecoration: 'none', letterSpacing: '0.03em',
-            transition: 'color 0.2s',
-          }}
-            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
-          >
-            ← Demo
-          </a>
-          <div style={{ width: 1, height: 16, background: 'var(--border)' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13, letterSpacing: '0.2em', color: 'var(--text-primary)' }}>
               YUKTI
@@ -624,7 +754,7 @@ export default function Home() {
           {/* GCP badge */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ display: 'flex', gap: 3 }}>
-              {['#4285F4','#EA4335','#FBBC05','#34A853'].map((c, i) => (
+              {['#4285F4', '#EA4335', '#FBBC05', '#34A853'].map((c, i) => (
                 <div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: c }} />
               ))}
             </div>
@@ -703,7 +833,7 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24, marginBottom: 80 }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24, marginBottom: 48 }}
             >
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {/* Outer pulse rings */}
@@ -754,6 +884,44 @@ export default function Home() {
                   Speak naturally in your regional dialect
                 </div>
               </div>
+
+              {!isRecording && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-secondary)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                    — or —
+                  </div>
+                  <input
+                    type="file"
+                    accept=".mp3,.wav,audio/mp3,audio/wav"
+                    style={{ display: 'none' }}
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 16px',
+                      background: 'rgba(0,0,0,0.03)',
+                      border: '1px solid rgba(0,0,0,0.08)',
+                      borderRadius: 6,
+                      color: 'var(--text-secondary)',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 10,
+                      letterSpacing: '0.04em',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.15)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                  >
+                    <Upload size={12} />
+                    Upload Audio
+                  </button>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -778,25 +946,6 @@ export default function Home() {
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--red)', letterSpacing: '0.04em', marginBottom: 12 }}>
                 {apiError}
               </div>
-              <button
-                onClick={startDemo}
-                style={{
-                  padding: '8px 16px',
-                  background: 'rgba(20,184,166,0.1)',
-                  border: '1px solid rgba(20,184,166,0.3)',
-                  borderRadius: 6,
-                  color: 'var(--teal)',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  letterSpacing: '0.04em',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(20,184,166,0.15)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(20,184,166,0.1)'; }}
-              >
-                Try Demo Instead
-              </button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -861,9 +1010,10 @@ export default function Home() {
               animate={{ opacity: 1 }}
               style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
             >
-              <div style={{ width: '100%', maxWidth: 860, borderTop: '1px solid var(--border)', paddingTop: 48, marginTop: 16 }}>
-                <EquityReport auditData={auditData} />
-              </div>
+              <div id="equity-report" style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ width: '100%', maxWidth: 860, borderTop: '1px solid var(--border)', paddingTop: 48, marginTop: 16 }}>
+                  <EquityReport auditData={auditData} />
+                </div>
 
               {repairData && (
                 <motion.div
@@ -928,6 +1078,7 @@ export default function Home() {
                   )}
                 </motion.div>
               )}
+              </div>
 
               {/* Record again */}
               <motion.div
@@ -983,9 +1134,11 @@ export default function Home() {
                   <Mic size={12} />
                   New Audit
                 </button>
-                <a
-                  href="/demo"
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={isGeneratingPdf}
                   style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
                     padding: '10px 20px',
                     background: 'rgba(20,184,166,0.08)',
                     border: '1px solid rgba(20,184,166,0.2)',
@@ -994,14 +1147,17 @@ export default function Home() {
                     fontFamily: 'var(--font-mono)',
                     fontSize: 11,
                     letterSpacing: '0.06em',
-                    textDecoration: 'none',
+                    cursor: isGeneratingPdf ? 'not-allowed' : 'pointer',
+                    opacity: isGeneratingPdf ? 0.7 : 1,
                     transition: 'all 0.2s ease',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(20,184,166,0.12)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(20,184,166,0.08)'; }}
+                  onMouseEnter={e => { if (!isGeneratingPdf) e.currentTarget.style.background = 'rgba(20,184,166,0.12)'; }}
+                  onMouseLeave={e => { if (!isGeneratingPdf) e.currentTarget.style.background = 'rgba(20,184,166,0.08)'; }}
+                  data-html2canvas-ignore="true"
                 >
-                  View Demo →
-                </a>
+                  <Download size={12} />
+                  {isGeneratingPdf ? 'Generating PDF...' : 'Download Audit Report'}
+                </button>
               </motion.div>
             </motion.div>
           )}
@@ -1059,6 +1215,8 @@ export default function Home() {
           </span>
         ))}
       </div>
+      {/* Hidden Official PDF layout */}
+      <OfficialPdfReport auditData={auditData} repairData={repairData} />
     </main>
   );
 }
