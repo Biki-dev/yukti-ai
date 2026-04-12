@@ -1,12 +1,12 @@
 'use client';
 
-import { Mic, ShieldCheck, Globe, Loader2, FileText, Activity } from 'lucide-react';
+import { Mic, ShieldCheck, Globe, Loader2, FileText, Activity, Wand2 } from 'lucide-react';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PipelineVisualizer } from '@/components/PipelineVisualizer';
 
 export default function Home() {
-  const { isRecording, startRecording, stopRecording, auditData, isProcessing, pipelineStage } = useAudioRecorder();
+  const { isRecording, startRecording, stopRecording, auditData, isProcessing, pipelineStage, repairData, isGeneratingRepair, generateContextualRepair } = useAudioRecorder();
   const isComplete = !isProcessing && auditData !== null;
 
   return (
@@ -248,6 +248,55 @@ export default function Home() {
                       <div className="bg-red-50 p-3 rounded-lg border border-red-100">
                         <p className="text-xs font-bold text-red-600 uppercase tracking-wide">Bias Analysis</p>
                         <p className="text-sm text-red-900 mt-1">{auditData.audit.potential_bias_analysis}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Generate Contextual Repair Button */}
+                <button
+                  onClick={generateContextualRepair}
+                  disabled={isGeneratingRepair}
+                  className="w-full px-4 py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
+                >
+                  {isGeneratingRepair ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Generating Repair...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="w-4 h-4" />
+                      Generate Contextual Repair
+                    </>
+                  )}
+                </button>
+
+                {/* Repair Results - Before and After */}
+                {repairData && (
+                  <div className="bg-teal-50 border border-teal-100 rounded-xl p-4 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Wand2 className="w-4 h-4 text-teal-600" />
+                      <p className="text-xs font-bold text-teal-700 uppercase tracking-wide">Linguistic Repair</p>
+                    </div>
+
+                    {/* Before */}
+                    <div className="bg-white rounded-lg p-3 border border-teal-100">
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Before (Original)</p>
+                      <p className="text-sm text-slate-800 leading-relaxed italic">{repairData.original || auditData.transcript}</p>
+                    </div>
+
+                    {/* After */}
+                    <div className="bg-white rounded-lg p-3 border border-emerald-100">
+                      <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-2">After (Repaired)</p>
+                      <p className="text-sm text-emerald-900 leading-relaxed font-medium">{repairData.repaired}</p>
+                    </div>
+
+                    {/* Explanation */}
+                    {repairData.explanation && (
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
+                        <p className="text-xs font-bold text-blue-600 uppercase tracking-wide mb-2">How it helps</p>
+                        <p className="text-sm text-blue-900 leading-relaxed">{repairData.explanation}</p>
                       </div>
                     )}
                   </div>

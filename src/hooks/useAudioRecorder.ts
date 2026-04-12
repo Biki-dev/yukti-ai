@@ -5,6 +5,8 @@ export const useAudioRecorder = () => {
   const [auditData, setAuditData] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [pipelineStage, setPipelineStage] = useState(-1);
+  const [repairData, setRepairData] = useState<any>(null);
+  const [isGeneratingRepair, setIsGeneratingRepair] = useState(false);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
 
@@ -85,5 +87,34 @@ export const useAudioRecorder = () => {
     setIsRecording(false);
   };
 
-  return { isRecording, startRecording, stopRecording, auditData, isProcessing, pipelineStage };
+  const generateContextualRepair = async () => {
+    if (!auditData) return;
+    
+    setIsGeneratingRepair(true);
+    try {
+      const response = await fetch('/api/repair', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcript: auditData.transcript,
+          word_risks: auditData.word_risks,
+          audit: auditData.audit,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Repair generation failed');
+        return;
+      }
+
+      const data = await response.json();
+      setRepairData(data);
+    } catch (error) {
+      console.error('Error generating repair:', error);
+    } finally {
+      setIsGeneratingRepair(false);
+    }
+  };
+
+  return { isRecording, startRecording, stopRecording, auditData, isProcessing, pipelineStage, repairData, isGeneratingRepair, generateContextualRepair };
 };
