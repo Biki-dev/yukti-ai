@@ -120,53 +120,135 @@ export default function Home() {
                   )}
                 </div>
               </div>
-              <div className="border-t pt-4 flex items-start gap-4">
-                <Activity className="w-5 h-5 text-teal-600 mt-1 shrink-0" />
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-teal-700 uppercase tracking-wider flex items-center justify-between">
-                    Linguistic Audit
-                    {auditData.equity_score !== undefined && (
-                      <span className="text-xs bg-teal-100 text-teal-800 px-2 py-1 rounded-full border border-teal-200">Score: {Number(auditData.equity_score).toFixed(1)}</span>
-                    )}
-                  </h3>
-                  {/* Smart Rendering: Handle both object and string responses from Gemini */}
-                  {typeof auditData.audit === 'object' && auditData.audit !== null ? (
-                    <div className="mt-4 space-y-3">
-                      {auditData.audit.accent_identified && (
-                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Identified Accent</p>
-                          <p className="text-sm text-slate-800 mt-1">{auditData.audit.accent_identified}</p>
-                        </div>
-                      )}
-            
-                      {auditData.audit.features && (
-                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Phonetic Features</p>
-                          <p className="text-sm text-slate-800 mt-1">{auditData.audit.features}</p>
-                        </div>
-                      )}
-            
-                      {auditData.audit.potential_bias_analysis && (
-                        <div className="bg-red-50 p-3 rounded-lg border border-red-100">
-                          <p className="text-xs font-bold text-red-600 uppercase tracking-wide">Bias Analysis</p>
-                          <p className="text-sm text-red-900 mt-1">{auditData.audit.potential_bias_analysis}</p>
-                        </div>
-                      )}
-            
-                      {/* Fallback to recommendation if the object is structured differently */}
-                      {!auditData.audit.accent_identified && auditData.recommendation && (
-                        <p className="text-gray-700 mt-2 leading-relaxed text-sm">{auditData.recommendation}</p>
-                      )}
+              <div className="border-t pt-4 flex flex-col gap-4">
+
+                {/* Score Ring + Header */}
+                <div className="flex items-center gap-5">
+                  <div className="relative w-20 h-20 shrink-0">
+                    <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
+                      <circle
+                        cx="40" cy="40" r="30"
+                        fill="none"
+                        stroke="#e5e7eb"
+                        strokeWidth="8"
+                      />
+                      <circle
+                        cx="40" cy="40" r="30"
+                        fill="none"
+                        stroke={
+                          auditData.equity_score >= 0.7
+                            ? '#0d9488'
+                            : auditData.equity_score >= 0.4
+                            ? '#f59e0b'
+                            : '#ef4444'
+                        }
+                        strokeWidth="8"
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 30}`}
+                        strokeDashoffset={`${2 * Math.PI * 30 * (1 - Number(auditData.equity_score))}`}
+                        style={{ transition: 'stroke-dashoffset 1.2s ease, stroke 0.5s ease' }}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center rotate-0">
+                      <span className="text-lg font-semibold text-gray-800 leading-none">
+                        {(Number(auditData.equity_score) * 100).toFixed(0)}
+                      </span>
+                      <span className="text-[10px] text-gray-400 leading-none mt-0.5">/ 100</span>
                     </div>
-                  ) : (
-                    /* Fallback if the model returns a standard string */
-                    <div className="mt-3">
-                      <p className="text-gray-700 leading-relaxed text-sm">
-                        {typeof auditData.audit === 'string' ? auditData.audit : auditData.recommendation}
-                      </p>
-                    </div>
-                  )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-teal-700 uppercase tracking-wider flex items-center gap-2">
+                      <Activity className="w-4 h-4" />
+                      Fairness Scorecard
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {auditData.equity_score >= 0.7
+                        ? 'This speaker would be treated equitably by standard AI systems.'
+                        : auditData.equity_score >= 0.4
+                        ? 'Moderate bias risk detected. Correction recommended.'
+                        : 'High bias risk. Standard AI would likely misrepresent this speaker.'}
+                    </p>
+                  </div>
                 </div>
+
+                {/* Scorecard Breakdown Table */}
+                {auditData.scorecard && (
+                  <div className="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
+                    <div className="px-4 py-2 border-b border-slate-100">
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Breakdown</p>
+                    </div>
+                    {[
+                      { label: 'Phonetic Accuracy', key: 'phonetic_accuracy', icon: '🔊' },
+                      { label: 'Lexical Fairness', key: 'lexical_fairness', icon: '📝' },
+                      { label: 'Contextual Equity', key: 'contextual_equity', icon: '🎯' },
+                      { label: 'Overall Bias Risk', key: 'overall_bias_risk', icon: '⚠️', invert: true },
+                    ].map(({ label, key, icon, invert }) => {
+                      const raw = Number(auditData.scorecard[key] ?? 0);
+                      const display = invert ? 1 - raw : raw;
+                      const pct = Math.round(display * 100);
+                      const barColor =
+                        pct >= 70 ? 'bg-teal-400' : pct >= 40 ? 'bg-amber-400' : 'bg-red-400';
+                      return (
+                        <div key={key} className="px-4 py-2.5 border-b border-slate-100 last:border-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-slate-600 flex items-center gap-1.5">
+                              <span className="text-sm">{icon}</span>
+                              {label}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-700">{pct}%</span>
+                          </div>
+                          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${barColor}`}
+                              style={{
+                                width: `${pct}%`,
+                                transition: 'width 1s ease',
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* XAI Explanation Box */}
+                {auditData.xai_explanation && (
+                  <div className="bg-teal-50 border border-teal-100 rounded-xl p-4 flex gap-3">
+                    <ShieldCheck className="w-4 h-4 text-teal-600 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-teal-700 uppercase tracking-wide mb-1">
+                        Why this score? (XAI)
+                      </p>
+                      <p className="text-sm text-teal-900 leading-relaxed">{auditData.xai_explanation}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Existing Audit Details (accent, features, bias analysis) */}
+                {typeof auditData.audit === 'object' && auditData.audit !== null && (
+                  <div className="space-y-2">
+                    {auditData.audit.accent_identified && (
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Identified Accent</p>
+                        <p className="text-sm text-slate-800 mt-1">{auditData.audit.accent_identified}</p>
+                      </div>
+                    )}
+                    {auditData.audit.features && (
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Phonetic Features</p>
+                        <p className="text-sm text-slate-800 mt-1">{auditData.audit.features}</p>
+                      </div>
+                    )}
+                    {auditData.audit.potential_bias_analysis && (
+                      <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                        <p className="text-xs font-bold text-red-600 uppercase tracking-wide">Bias Analysis</p>
+                        <p className="text-sm text-red-900 mt-1">{auditData.audit.potential_bias_analysis}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
               </div>
             </motion.div>
           )}
