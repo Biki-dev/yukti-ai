@@ -42,10 +42,10 @@ Given this original transcript and audit data:
 - High-Risk Words: ${word_risks?.map((w: any) => `${w.word} (risk: ${(w.risk * 100).toFixed(0)}%)`).join(', ') || 'None identified'}
 
 Generate a repaired version that:
-1. Preserves the original meaning and intent
-2. Uses phonetically similar but more universally recognized speech patterns
-3. Maintains natural pacing and conversational tone
-4. Addresses the specific phonetic challenges that cause bias
+1. Preserves the original meaning and intent.
+2. CRITICAL: If the input contains Hindi, Assamese, or Code-Mixed dialects (e.g., Hinglish/Benglish), the repaired version MUST act as a Standard English translation. Example: 'Hello, mera naam Chiranjeevi hai' should become 'Hello, my name is Chiranjeevi'. Do NOT simply alter the spelling of non-English words.
+3. For primarily English inputs, use phonetically similar but more universally recognized standard English patterns.
+4. Maintains natural pacing, conversational tone, and addresses the specific phonetic challenges.
 
 Return ONLY a valid JSON object with exactly these keys:
 - "original": the original transcript as a string
