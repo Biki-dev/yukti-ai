@@ -170,6 +170,41 @@ function LanguageBreakdownBar({ wordRisks }: { wordRisks: any[] }) {
         Language Composition
       </div>
 
+      {Object.values(counts).filter(v => v > 0).length > 1 && (
+        <div style={{
+          padding: 'clamp(8px, 2vw, 12px) clamp(10px, 2vw, 16px)',
+          background: 'rgba(59,130,246,0.08)',
+          border: '1px solid rgba(59,130,246,0.2)',
+          borderRadius: 8,
+          marginBottom: 'clamp(10px, 2vw, 14px)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}>
+          <span style={{ fontSize: 14 }}>🔀</span>
+          <div>
+            <div style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'clamp(9px, 1.8vw, 11px)',
+              fontWeight: 700,
+              color: '#3b82f6',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+            }}>
+              Code-Switching Detected
+            </div>
+            <div style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'clamp(8px, 1.5vw, 10px)',
+              color: 'var(--text-secondary)',
+              marginTop: 2,
+            }}>
+              {parts.join(' · ')}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stacked bar */}
       <div style={{
         width: '100%',
@@ -443,7 +478,12 @@ function ResearchBasis() {
 function LoadingSkeletons() {
   return (
     <div style={{ width: '100%', maxWidth: 'clamp(280px, 90vw, 860px)', marginTop: 'clamp(20px, 4vw, 32px)' }}>
-      {[{ w: '80%', delay: '0s' }, { w: '60%', delay: '0.1s' }, { w: '90%', delay: '0.2s' }].map((s, i) => (
+      {[
+        { w: '80%', delay: '0s' },
+        { w: '60%', delay: '0.1s' },
+        { w: '90%', delay: '0.2s' },
+        { w: '45%', delay: '0.3s' }
+      ].map((s, i) => (
         <div
           key={i}
           className="skeleton-shimmer"
@@ -1565,7 +1605,7 @@ export default function Home() {
                 </div>
 
                 {/* Waveform Visualizer */}
-                <WaveformVisualizer stream={isRecording ? streamRef.current : null} />
+                <WaveformVisualizer stream={isRecording ? streamRef.current : null} isRecording={isRecording} />
               </div>
 
               {/* Label below outer container */}
@@ -1849,7 +1889,7 @@ export default function Home() {
 
         {/* Loading skeletons */}
         <AnimatePresence>
-          {isProcessing && pipelineStage >= 3 && (
+          {isProcessing && pipelineStage >= 2 && (
             <motion.div
               key="skeletons"
               initial={{ opacity: 0 }}
