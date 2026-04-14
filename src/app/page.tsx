@@ -1541,83 +1541,95 @@ export default function Home() {
               exit={{ opacity: 0, scale: 0.8 }}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24, marginBottom: 0 }}
             >
-              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                {/* Outer pulse rings - scaled for mobile */}
-                {isRecording && [1, 2, 3].map((i) => (
-                  <motion.div
-                    key={i}
-                    animate={{ scale: [1, 1.8 + i * 0.3], opacity: [0.3, 0] }}
-                    transition={{ duration: 2, repeat: Infinity, delay: i * 0.4, ease: 'easeOut' }}
-                    style={{
-                      position: 'absolute',
-                      width: 100,
-                      height: 100,
-                      borderRadius: '50%',
-                      border: '1px solid var(--teal)',
-                    }}
-                  />
-                ))}
-
-                {/* Outer container - 100px for better mobile proportions */}
+              {/* Clean flex column: outer ring → button → waveform → label */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 20,
+              }}>
+                {/* Button container with pulse rings */}
                 <div style={{
-                  width: 100,
-                  height: 100,
-                  borderRadius: '50%',
-                  border: '2px solid rgba(20,184,166,0.3)',
-                  background: 'rgba(20,184,166,0.05)',
+                  position: 'relative',
+                  width: 80,
+                  height: 80,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  position: 'relative',
                 }}>
-                  {/* Inner button - 68px for better proportions */}
+                  {/* Pulse rings - emanating outward when recording */}
+                  {isRecording && (
+                    <>
+                      {[0, 1, 2].map((i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ scale: 1, opacity: 0.6 }}
+                          animate={{ scale: 2, opacity: 0 }}
+                          transition={{
+                            duration: 1.5,
+                            repeat: Infinity,
+                            delay: i * 0.5,
+                            ease: 'easeOut',
+                          }}
+                          style={{
+                            position: 'absolute',
+                            width: 80,
+                            height: 80,
+                            borderRadius: '50%',
+                            border: '2px solid var(--teal)',
+                            background: 'rgba(20,184,166,0.1)',
+                          }}
+                        />
+                      ))}
+                    </>
+                  )}
+
+                  {/* Main 80px circle button */}
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={isRecording ? stopRecording : startRecording}
                     aria-label={isRecording ? 'Stop recording' : 'Start recording'}
                     style={{
-                      width: 68,
-                      height: 68,
+                      width: 80,
+                      height: 80,
                       borderRadius: '50%',
-                      background: isRecording ? 'rgba(20,184,166,0.12)' : 'rgba(255,255,255,0.9)',
-                      border: isRecording ? '2px solid var(--teal)' : '1.5px solid rgba(0,0,0,0.12)',
-                      boxShadow: isRecording ? '0 0 0 8px rgba(20,184,166,0.08)' : 'none',
+                      background: isRecording ? 'rgba(20,184,166,0.12)' : '#fff',
+                      border: isRecording ? '2px solid var(--teal)' : '1.5px solid rgba(0,0,0,0.15)',
+                      boxShadow: isRecording ? '0 0 20px rgba(20,184,166,0.3)' : '0 2px 8px rgba(0,0,0,0.06)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
-                      position: 'absolute',
-                      inset: 0,
-                      margin: 'auto',
+                      position: 'relative',
+                      zIndex: 1,
                       outline: 'none',
                     }}
                     onFocus={(e) => {
-                      e.currentTarget.style.boxShadow = isRecording ? '0 0 0 8px rgba(20,184,166,0.12)' : '0 0 0 2px var(--teal)';
+                      e.currentTarget.style.boxShadow = isRecording ? '0 0 20px rgba(20,184,166,0.4)' : '0 0 0 2px var(--teal)';
                     }}
                     onBlur={(e) => {
-                      e.currentTarget.style.boxShadow = isRecording ? '0 0 0 8px rgba(20,184,166,0.08)' : 'none';
+                      e.currentTarget.style.boxShadow = isRecording ? '0 0 20px rgba(20,184,166,0.3)' : '0 2px 8px rgba(0,0,0,0.06)';
                     }}
                   >
-                    <Mic size={24} style={{ color: isRecording ? 'var(--teal)' : 'rgba(0,0,0,0.35)' }} />
+                    <Mic size={24} style={{ color: isRecording ? 'var(--teal)' : 'rgba(0,0,0,0.4)' }} />
                   </motion.button>
                 </div>
 
-                {/* Waveform Visualizer */}
+                {/* Waveform Visualizer - BELOW the button */}
                 <WaveformVisualizer stream={isRecording ? streamRef.current : null} isRecording={isRecording} />
-              </div>
 
-              {/* Label below outer container */}
-              <div style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                color: isRecording ? 'var(--teal)' : 'var(--text-muted)',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                marginTop: 8,
-              }}>
-                {isRecording ? '● Recording' : 'Press Space or click'}
+                {/* Label - BELOW the waveform */}
+                <div style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 10,
+                  color: isRecording ? 'var(--teal)' : 'var(--text-muted)',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                }}>
+                  {isRecording ? '● Recording' : 'Press Space or click'}
+                </div>
               </div>
 
               <div style={{ textAlign: 'center' }}>
