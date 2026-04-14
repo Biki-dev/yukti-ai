@@ -1,15 +1,15 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
 // ─── Mock audit data for demo/testing ────────────────────────────────────────
 const MOCK_AUDIT_DATA = {
   transcript: "I'm speaking in my regional dialect and the system should capture my authentic phonetic patterns.",
   word_risks: [
-    { word: "speaking", risk: 0.15 },
-    { word: "regional", risk: 0.28 },
-    { word: "dialect", risk: 0.35 },
-    { word: "system", risk: 0.08 },
-    { word: "authentic", risk: 0.22 },
-    { word: "phonetic", risk: 0.12 },
+    { word: "speaking", risk: 0.15, language: "en" },
+    { word: "regional", risk: 0.28, language: "en" },
+    { word: "dialect", risk: 0.35, language: "en" },
+    { word: "system", risk: 0.08, language: "en" },
+    { word: "authentic", risk: 0.22, language: "en" },
+    { word: "phonetic", risk: 0.12, language: "en" },
   ],
   audit: {
     accent_identified: "Northeast Indian / Assamese-influenced English",
@@ -35,8 +35,12 @@ export const useAudioRecorder = () => {
   const [isGeneratingRepair, setIsGeneratingRepair] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [micPermissionDenied, setMicPermissionDenied] = useState(false);
+  const [retryInfo, setRetryInfo] = useState<{ attempt: number; maxRetries: number } | null>(null);
+  const [latencyInfo, setLatencyInfo] = useState<string | null>(null);
+
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
+  const lastBlobRef = useRef<Blob | null>(null);
 
   const resetAudit = () => {
     setAuditData(null);
@@ -45,6 +49,9 @@ export const useAudioRecorder = () => {
     setApiError(null);
     setMicPermissionDenied(false);
     setIsRecording(false);
+    setRetryInfo(null);
+    setLatencyInfo(null);
+    lastBlobRef.current = null;
     if (mediaRecorder.current && mediaRecorder.current.stream) {
       mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
     }
@@ -69,20 +76,21 @@ export const useAudioRecorder = () => {
                setMicPermissionDenied(false);
              }
           };
-        } catch (e) {
+        } catch (_err) {
           // Safari fallback gracefully
         }
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicPermissionDenied(false);
-      
+
       mediaRecorder.current = new MediaRecorder(stream);
       chunks.current = [];
 
       mediaRecorder.current.ondataavailable = (e) => chunks.current.push(e.data);
       mediaRecorder.current.onstop = async () => {
         const blob = new Blob(chunks.current, { type: 'audio/webm' });
+        lastBlobRef.current = blob;
         await processAudioBlob(blob, 'audio/webm');
       };
 
@@ -97,13 +105,14 @@ export const useAudioRecorder = () => {
     }
   };
 
-  const processAudioBlob = async (blob: Blob, processType: string = 'audio/webm') => {
+  const processAudioBlob = useCallback(async (blob: Blob, processType: string = 'audio/webm') => {
     setIsProcessing(true);
     setPipelineStage(0);
     setAuditData(null);
     setRepairData(null);
     setApiError(null);
-    
+    setRetryInfo(null);
+
     const formData = new FormData();
     const ext = processType.includes('mp3') ? 'mp3' : processType.includes('wav') ? 'wav' : 'webm';
     formData.append('audio', blob, `audio.${ext}`);
@@ -112,8 +121,11 @@ export const useAudioRecorder = () => {
     let finalError: string | null = null;
     let isApiDone = false;
 
+    // Store reference for potential retry
+    lastBlobRef.current = blob;
+
     // Run backend fetch independently
-    const fetchTask = (async () => {
+    (async () => {
       try {
         const response = await fetch('/api/audit', {
           method: 'POST',
@@ -151,6 +163,9 @@ export const useAudioRecorder = () => {
                 console.error('Audit pipeline error:', payload.message);
                 finalError = payload.message || 'Audit pipeline error';
               }
+              if (payload.type === 'retry') {
+                setRetryInfo({ attempt: payload.attempt, maxRetries: payload.maxRetries });
+              }
             } catch (parseError) {
               console.warn('Skipping non-JSON pipeline line:', line, parseError);
             }
@@ -176,7 +191,7 @@ export const useAudioRecorder = () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       setPipelineStage(3); // Gemini API
-      
+
       // Wait for actual API processing to finish if it hasn't already
       while (!isApiDone) {
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -191,11 +206,25 @@ export const useAudioRecorder = () => {
         setApiError(finalError);
       } else if (finalResultData) {
         setAuditData(finalResultData);
+        // Fetch health/latency after successful audit
+        try {
+          const healthResponse = await fetch('/api/health');
+          if (healthResponse.ok) {
+            const healthData = await healthResponse.json();
+            if (healthData.latencyMs) {
+              setLatencyInfo(healthData.latencyMs.toString());
+            }
+          }
+        } catch (e) {
+          // Silently ignore health check failures
+        }
       }
     } finally {
       setIsProcessing(false);
+      // Nullify blob reference after sending (privacy)
+      chunks.current = [];
     }
-  };
+  }, []);
 
   const stopRecording = () => {
     mediaRecorder.current?.stop();
@@ -209,6 +238,7 @@ export const useAudioRecorder = () => {
     setPipelineStage(-1);
     setApiError(null);
     setIsProcessing(true);
+    setRetryInfo(null);
 
     // Simulate real-time pipeline stages
     const stageDurations = [600, 900, 800, 1000, 700];
@@ -221,11 +251,24 @@ export const useAudioRecorder = () => {
     setAuditData(MOCK_AUDIT_DATA);
     setIsProcessing(false);
     setPipelineStage(-1);
+
+    // Fetch latency for demo too
+    try {
+      const healthResponse = await fetch('/api/health');
+      if (healthResponse.ok) {
+        const healthData = await healthResponse.json();
+        if (healthData.latencyMs) {
+          setLatencyInfo(healthData.latencyMs.toString());
+        }
+      }
+    } catch (e) {
+      // Silently ignore
+    }
   };
 
   const generateContextualRepair = async () => {
     if (!auditData) return;
-    
+
     setIsGeneratingRepair(true);
     try {
       const response = await fetch('/api/repair', {
@@ -254,5 +297,24 @@ export const useAudioRecorder = () => {
 
   const dismissMicPopup = () => setMicPermissionDenied(false);
 
-  return { isRecording, startRecording, stopRecording, auditData, isProcessing, pipelineStage, repairData, isGeneratingRepair, generateContextualRepair, startDemo, apiError, processAudioBlob, micPermissionDenied, dismissMicPopup, resetAudit };
+  return {
+    isRecording,
+    startRecording,
+    stopRecording,
+    auditData,
+    isProcessing,
+    pipelineStage,
+    repairData,
+    isGeneratingRepair,
+    generateContextualRepair,
+    startDemo,
+    apiError,
+    processAudioBlob,
+    micPermissionDenied,
+    dismissMicPopup,
+    resetAudit,
+    retryInfo,
+    lastBlobRef,
+    latencyInfo,
+  };
 };

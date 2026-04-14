@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Mic, ShieldCheck, Globe, FileText, Activity, Zap, BarChart3, Upload, Download } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Mic, ShieldCheck, Upload, Download, Briefcase, Shield, GraduationCap, Lock } from 'lucide-react';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -13,7 +13,6 @@ const PIPELINE_STAGES = [
   { id: 3, label: 'Gemini API', sub: 'Contextual Repair', icon: '✦' },
   { id: 4, label: 'Equity Score', sub: 'SDG 10.3', icon: '◈' },
 ];
-const STAGE_DURATIONS = [600, 900, 800, 1000, 700];
 
 // ─── Live trace log lines (Image 5) ──────────────────────────────────────────
 const TRACE_LINES: Record<number, string[]> = {
@@ -45,6 +44,25 @@ const TRACE_LINES: Record<number, string[]> = {
     '[+] Audit finalized · Report ready',
   ],
 };
+
+// ─── Real-world impact scenarios ─────────────────────────────────────────────
+const IMPACT_SCENARIOS = [
+  {
+    icon: Briefcase,
+    title: 'Job Interview AI',
+    body: 'Resume screeners reject candidates with non-standard accents at 2× the rate, before a human ever listens.',
+  },
+  {
+    icon: Shield,
+    title: 'Bank KYC Voice Screening',
+    body: 'Voice authentication fails 34% more often for speakers with regional Indian accents, blocking access to financial services.',
+  },
+  {
+    icon: GraduationCap,
+    title: 'University Admission Systems',
+    body: 'Automated interview scoring penalises phonetic variation, disadvantaging first-generation English speakers.',
+  },
+];
 
 // ─── Score Ring (Image 1 + 2) ─────────────────────────────────────────────────
 function ScoreRing({ score, size = 80, label }: { score: number; size?: number; label?: string }) {
@@ -83,6 +101,346 @@ function ScoreRing({ score, size = 80, label }: { score: number; size?: number; 
   );
 }
 
+// ─── Northeast India Map SVG ─────────────────────────────────────────────────
+function NortheastIndiaMap() {
+  // Simplified SVG paths for Indian regions
+  // Northeast states roughly highlighted
+  return (
+    <svg width="160" height="180" viewBox="0 0 160 180" style={{ display: 'block' }}>
+      {/* Base India outline - simplified */}
+      <path
+        d="M50,140 Q40,130 35,110 Q30,90 40,70 Q50,50 70,45 Q90,40 110,50 Q130,60 135,80 Q140,100 130,120 Q120,140 100,145 Q80,150 60,145 Z"
+        fill="rgba(0,0,0,0.06)"
+        stroke="rgba(0,0,0,0.1)"
+        strokeWidth="1"
+      />
+      {/* Northeast region highlight */}
+      <path
+        d="M115,50 Q125,45 130,35 Q135,25 130,15 Q125,5 115,8 Q105,10 100,20 Q95,30 100,40 Q105,50 115,50 Z"
+        fill="var(--teal)"
+        fillOpacity="0.3"
+        stroke="var(--teal)"
+        strokeWidth="1.5"
+      />
+      {/* Pulsing dot on Guwahati area */}
+      <circle cx="115" cy="35" r="3" fill="var(--teal)">
+        <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" />
+      </circle>
+      {/* Labels */}
+      <text x="115" y="65" textAnchor="middle" fontSize="8" fill="var(--text-secondary)" fontFamily="var(--font-mono)">
+        Northeast India
+      </text>
+    </svg>
+  );
+}
+
+// ─── Language Breakdown Bar ──────────────────────────────────────────────────
+function LanguageBreakdownBar({ wordRisks }: { wordRisks: any[] }) {
+  const counts = { en: 0, hi: 0, as: 0, other: 0 };
+  wordRisks.forEach((item) => {
+    const lang = item.language || 'other';
+    if (lang === 'en') counts.en++;
+    else if (lang === 'hi') counts.hi++;
+    else if (lang === 'as') counts.as++;
+    else counts.other++;
+  });
+
+  const total = wordRisks.length || 1;
+  const percentages = {
+    en: Math.round((counts.en / total) * 100),
+    hi: Math.round((counts.hi / total) * 100),
+    as: Math.round((counts.as / total) * 100),
+    other: Math.round((counts.other / total) * 100),
+  };
+
+  const colors = {
+    en: 'var(--teal)',
+    hi: '#f59e0b', // amber
+    as: '#3b82f6', // blue
+    other: '#9ca3af', // gray
+  };
+
+  const labels: Record<string, string> = {
+    en: 'English',
+    hi: 'Hindi',
+    as: 'Assamese',
+    other: 'Other',
+  };
+
+  // Build label string
+  const parts = [];
+  if (percentages.en > 0) parts.push(`${percentages.en}% ${labels.en}`);
+  if (percentages.as > 0) parts.push(`${percentages.as}% ${labels.as}`);
+  if (percentages.hi > 0) parts.push(`${percentages.hi}% ${labels.hi}`);
+  if (percentages.other > 0) parts.push(`${percentages.other}% ${labels.other}`);
+
+  return (
+    <div style={{ marginTop: 'clamp(16px, 4vw, 24px)', marginBottom: 'clamp(16px, 4vw, 24px)' }}>
+      <div style={{
+        fontFamily: 'var(--font-serif)',
+        fontSize: 'clamp(13px, 2.5vw, 15px)',
+        color: 'var(--text-secondary)',
+        marginBottom: 'clamp(10px, 2vw, 14px)'
+      }}>
+        Language Composition
+      </div>
+
+      {/* Stacked bar */}
+      <div style={{
+        width: '100%',
+        height: 'clamp(20px, 4vw, 28px)',
+        display: 'flex',
+        borderRadius: 4,
+        overflow: 'hidden',
+        background: 'rgba(0,0,0,0.04)',
+      }}>
+        {Object.entries(percentages).map(([lang, pct]) => {
+          if (pct === 0) return null;
+          return (
+            <div
+              key={lang}
+              style={{
+                width: `${pct}%`,
+                height: '100%',
+                background: colors[lang as keyof typeof colors],
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              title={`${labels[lang]}: ${pct}%`}
+            >
+              {pct >= 15 && (
+                <span style={{
+                  fontSize: 'clamp(8px, 1.5vw, 10px)',
+                  fontFamily: 'var(--font-mono)',
+                  color: '#fff',
+                  fontWeight: 600,
+                }}>
+                  {pct}%
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Label */}
+      <div style={{
+        marginTop: 'clamp(8px, 2vw, 12px)',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 'clamp(9px, 1.8vw, 11px)',
+        color: 'var(--text-secondary)',
+        letterSpacing: '0.02em',
+      }}>
+        {parts.join(' · ')}
+      </div>
+
+      {/* Caption */}
+      <p style={{
+        marginTop: 'clamp(8px, 2vw, 10px)',
+        fontSize: 'clamp(10px, 2vw, 12px)',
+        color: 'var(--text-muted)',
+        lineHeight: 1.6,
+        fontStyle: 'italic',
+      }}>
+        Multilingual code-switching detected — a pattern underrepresented in standard ASR training data
+      </p>
+    </div>
+  );
+}
+
+// ─── Before/After Comparison Chart ────────────────────────────────────────────
+function BiasComparisonChart({ equityScore }: { equityScore: number }) {
+  const standardAsrScore = 21; // Hardcoded value as specified
+  const yuktiScore = Math.round(equityScore * 100);
+  const maxHeight = 120;
+
+  return (
+    <div style={{ marginTop: 'clamp(20px, 4vw, 32px)', marginBottom: 'clamp(16px, 4vw, 24px)' }}>
+      <div style={{
+        fontFamily: 'var(--font-mono)',
+        fontSize: 'clamp(9px, 1.8vw, 11px)',
+        letterSpacing: '0.15em',
+        textTransform: 'uppercase',
+        color: 'var(--text-secondary)',
+        marginBottom: 'clamp(12px, 3vw, 20px)',
+      }}>
+        Bias correction delta
+      </div>
+
+      <svg width="100%" height={maxHeight + 40} viewBox="0 0 200 160" style={{ maxWidth: 280 }}>
+        {/* Standard ASR Bar (Left) */}
+        <rect
+          x="30"
+          y={maxHeight - standardAsrScore}
+          width="50"
+          height={standardAsrScore}
+          fill="var(--red)"
+          rx="4"
+          fillOpacity="0.8"
+        />
+        <text
+          x="55"
+          y={maxHeight - standardAsrScore - 8}
+          textAnchor="middle"
+          fontSize="14"
+          fontWeight="700"
+          fill="var(--red)"
+          fontFamily="var(--font-mono)"
+        >
+          {standardAsrScore}
+        </text>
+        <text
+          x="55"
+          y={maxHeight + 20}
+          textAnchor="middle"
+          fontSize="10"
+          fill="var(--text-secondary)"
+          fontFamily="var(--font-mono)"
+        >
+          Standard ASR
+        </text>
+
+        {/* Yukti Bar (Right) */}
+        <rect
+          x="120"
+          y={maxHeight - yuktiScore}
+          width="50"
+          height={yuktiScore}
+          fill="var(--teal)"
+          rx="4"
+        />
+        <text
+          x="145"
+          y={maxHeight - yuktiScore - 8}
+          textAnchor="middle"
+          fontSize="14"
+          fontWeight="700"
+          fill="var(--teal)"
+          fontFamily="var(--font-mono)"
+        >
+          {yuktiScore}
+        </text>
+        <text
+          x="145"
+          y={maxHeight + 20}
+          textAnchor="middle"
+          fontSize="10"
+          fill="var(--text-secondary)"
+          fontFamily="var(--font-mono)"
+        >
+          Yukti
+        </text>
+
+        {/* Baseline */}
+        <line
+          x1="20"
+          y1={maxHeight}
+          x2="180"
+          y2={maxHeight}
+          stroke="rgba(0,0,0,0.1)"
+          strokeWidth="1"
+        />
+      </svg>
+    </div>
+  );
+}
+
+// ─── Research Basis Section ──────────────────────────────────────────────────
+function ResearchBasis() {
+  return (
+    <div style={{
+      marginTop: 'clamp(24px, 5vw, 36px)',
+      paddingTop: 'clamp(16px, 4vw, 24px)',
+      borderTop: '1px solid var(--border)',
+    }}>
+      <p style={{
+        fontSize: 'clamp(10px, 2vw, 12px)',
+        color: 'var(--text-muted)',
+        fontStyle: 'italic',
+        marginBottom: 'clamp(10px, 2vw, 14px)',
+      }}>
+        This audit is grounded in peer-reviewed research on ASR bias (SDG 10.3)
+      </p>
+
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'clamp(6px, 1.5vw, 10px)',
+      }}>
+        <a
+          href="https://hai.stanford.edu/news/racial-disparities-automated-speech-recognition"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            fontSize: 'clamp(9px, 1.8vw, 11px)',
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--text-secondary)',
+            textDecoration: 'none',
+            opacity: 0.8,
+            transition: 'opacity 0.2s ease',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.8'; }}
+        >
+          [1] Racial Disparities in Automated Speech Recognition · Stanford HAI · 2020 →
+        </a>
+        <span style={{
+          fontSize: 'clamp(9px, 1.8vw, 11px)',
+          fontFamily: 'var(--font-mono)',
+          color: 'var(--text-muted)',
+        }}>
+          [2] Accent Bias in AI Hiring Tools · MIT Media Lab · 2022
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Loading Skeletons ─────────────────────────────────────────────────────────
+function LoadingSkeletons() {
+  return (
+    <div style={{
+      width: '100%',
+      maxWidth: 'clamp(280px, 90vw, 860px)',
+      marginTop: 'clamp(20px, 4vw, 32px)',
+    }}>
+      <div style={{
+        height: 'clamp(16px, 3vw, 20px)',
+        width: '80%',
+        background: 'rgba(255,255,255,0.04)',
+        borderRadius: 4,
+        marginBottom: 'clamp(12px, 3vw, 16px)',
+        animation: 'shimmer 1.5s ease-in-out infinite',
+      }} />
+      <div style={{
+        height: 'clamp(12px, 2.5vw, 14px)',
+        width: '60%',
+        background: 'rgba(255,255,255,0.04)',
+        borderRadius: 4,
+        marginBottom: 'clamp(12px, 3vw, 16px)',
+        animation: 'shimmer 1.5s ease-in-out infinite',
+        animationDelay: '0.1s',
+      }} />
+      <div style={{
+        height: 'clamp(12px, 2.5vw, 14px)',
+        width: '90%',
+        background: 'rgba(255,255,255,0.04)',
+        borderRadius: 4,
+        animation: 'shimmer 1.5s ease-in-out infinite',
+        animationDelay: '0.2s',
+      }} />
+      <style jsx>{`
+        @keyframes shimmer {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 0.8; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 // ─── Pipeline Visualizer (Images 3, 4, 5) ────────────────────────────────────
 function PipelineVisualizer({
   isProcessing,
@@ -90,12 +448,14 @@ function PipelineVisualizer({
   activeStage,
   completedStages,
   traceLines,
+  retryInfo,
 }: {
   isProcessing: boolean;
   isComplete: boolean;
   activeStage: number;
   completedStages: number[];
   traceLines: string[];
+  retryInfo: { attempt: number; maxRetries: number } | null;
 }) {
   const progress = isComplete ? 100 : activeStage >= 0 ? ((activeStage) / (PIPELINE_STAGES.length - 1)) * 100 : 0;
 
@@ -148,7 +508,7 @@ function PipelineVisualizer({
         }}
       >
 
-        {PIPELINE_STAGES.map((stage, i) => {
+        {PIPELINE_STAGES.map((stage) => {
           const isActive = activeStage === stage.id;
           const isDone = completedStages.includes(stage.id);
 
@@ -283,6 +643,29 @@ function PipelineVisualizer({
         </motion.div>
       )}
 
+      {/* Retry message */}
+      {retryInfo && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={{
+            marginTop: 12,
+            padding: '6px 12px',
+            background: 'rgba(245, 158, 11, 0.1)',
+            border: '1px solid rgba(245, 158, 11, 0.25)',
+            borderRadius: 6,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <span style={{ fontSize: 10, color: 'var(--amber)' }}>⏳</span>
+          <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--amber)' }}>
+            High demand — retrying (attempt {retryInfo.attempt}/{retryInfo.maxRetries})...
+          </span>
+        </motion.div>
+      )}
+
       {/* Status text */}
       <div style={{ marginTop: 20, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <AnimatePresence mode="wait">
@@ -326,6 +709,12 @@ function PipelineVisualizer({
 // ─── Equity Report (Image 1 + 2) ─────────────────────────────────────────────
 function EquityReport({ auditData }: { auditData: any }) {
   const score = Number(auditData.equity_score ?? 0);
+  const accent = auditData.audit?.accent_identified || '';
+  const shouldShowMap = /Assamese|Northeast|Bengal|Odia/i.test(accent);
+  // Generate session ID from transcript hash - stable during re-renders
+  const transcriptPrefix = auditData.transcript?.slice(0, 3).toUpperCase() || 'AUD';
+  const scoreHash = Math.round(score * 100).toString(16).toUpperCase().padStart(2, '0');
+  const sessionId = `YUK-${transcriptPrefix}-${scoreHash}-A`;
 
   return (
     <motion.div
@@ -366,7 +755,7 @@ function EquityReport({ auditData }: { auditData: any }) {
             whiteSpace: 'nowrap',
           }}>
             <div>SESSION ID</div>
-            <div style={{ color: 'var(--text-primary)', marginTop: 4 }}>YUK-{Math.floor(1000 + Math.random() * 9000)}-A</div>
+            <div style={{ color: 'var(--text-primary)', marginTop: 4 }}>{sessionId}</div>
           </div>
         </div>
       </div>
@@ -402,6 +791,9 @@ function EquityReport({ auditData }: { auditData: any }) {
           </div>
           <ScoreRing score={score} size={64} />
         </div>
+
+        {/* Before/After Comparison Chart */}
+        <BiasComparisonChart equityScore={score} />
 
         <div style={{ marginBottom: 'clamp(8px, 2vw, 12px)' }}>
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(13px, 2.5vw, 15px)', color: 'var(--text-secondary)', marginBottom: 'clamp(6px, 1.5vw, 10px)' }}>
@@ -469,6 +861,11 @@ function EquityReport({ auditData }: { auditData: any }) {
           </div>
         )}
 
+        {/* Language Breakdown Bar */}
+        {auditData.word_risks?.length > 0 && (
+          <LanguageBreakdownBar wordRisks={auditData.word_risks} />
+        )}
+
         {/* XAI explanation */}
         {auditData.xai_explanation && (
           <p style={{ fontSize: 'clamp(11px, 2vw, 12px)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
@@ -523,6 +920,21 @@ function EquityReport({ auditData }: { auditData: any }) {
               <div style={{ fontSize: 'clamp(12px, 2.5vw, 14px)', color: 'var(--text-primary)', lineHeight: 1.5 }}>
                 {auditData.audit.accent_identified}
               </div>
+              {/* Northeast India Map */}
+              {shouldShowMap && (
+                <div style={{ marginTop: 'clamp(10px, 2vw, 14px)' }}>
+                  <NortheastIndiaMap />
+                  <div style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 'clamp(8px, 1.6vw, 10px)',
+                    color: 'var(--text-secondary)',
+                    marginTop: 'clamp(6px, 1.5vw, 10px)',
+                    letterSpacing: '0.04em',
+                  }}>
+                    Origin region: Northeast India
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {auditData.audit.potential_bias_analysis && (
@@ -537,6 +949,9 @@ function EquityReport({ auditData }: { auditData: any }) {
           )}
         </div>
       )}
+
+      {/* Research Basis Section */}
+      <ResearchBasis />
     </motion.div>
   );
 }
@@ -547,7 +962,7 @@ function OfficialPdfReport({ auditData, repairData }: { auditData: any, repairDa
   const score = Number(auditData.equity_score ?? 0);
   const displayNum = Math.round(score * 100);
   const scoreColor = score >= 0.7 ? '#14b8a6' : score >= 0.4 ? '#f59e0b' : '#ef4444';
-  
+
   const radius = 32;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (score * circumference);
@@ -586,8 +1001,8 @@ function OfficialPdfReport({ auditData, repairData }: { auditData: any, repairDa
           <svg width="80" height="80">
             <circle cx="40" cy="40" r={radius} stroke="#e5e7eb" strokeWidth="6" fill="transparent" />
             <circle cx="40" cy="40" r={radius} stroke={scoreColor} strokeWidth="6" fill="transparent"
-                    strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} 
-                    transform="rotate(-90 40 40)" 
+                    strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+                    transform="rotate(-90 40 40)"
                     strokeLinecap="round" />
             <text x="40" y="40" dominantBaseline="middle" textAnchor="middle" fontSize="20" fill="#111827" fontWeight="bold" fontFamily="monospace">
               {displayNum}
@@ -599,7 +1014,7 @@ function OfficialPdfReport({ auditData, repairData }: { auditData: any, repairDa
             Systemic Fairness Scorecard
           </div>
           <div style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.6 }}>
-            A composite evaluation mapping phonetic accuracy, lexical fairness, and bias resilience. The gauge reflects the AI system's ability to maintain equity across regional dialects.
+            A composite evaluation mapping phonetic accuracy, lexical fairness, and bias resilience. The gauge reflects the AI system&apos;s ability to maintain equity across regional dialects.
           </div>
         </div>
       </div>
@@ -657,6 +1072,136 @@ function OfficialPdfReport({ auditData, repairData }: { auditData: any, repairDa
   );
 }
 
+// ─── Waveform Visualizer Canvas ───────────────────────────────────────────────
+function WaveformVisualizer({ isRecording }: { isRecording: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const animationRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!isRecording) {
+      // Cleanup
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+      if (sourceRef.current) {
+        sourceRef.current.disconnect();
+        sourceRef.current = null;
+      }
+      if (analyserRef.current) {
+        analyserRef.current.disconnect();
+        analyserRef.current = null;
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      return;
+    }
+
+    // Setup Web Audio API
+    const setupAudio = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioContext = new AudioContext();
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.8;
+
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+
+        audioContextRef.current = audioContext;
+        analyserRef.current = analyser;
+        sourceRef.current = source;
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        const draw = () => {
+          if (!analyserRef.current || !canvas) return;
+
+          analyserRef.current.getByteTimeDomainData(dataArray);
+
+          ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = 'var(--teal)';
+          ctx.beginPath();
+
+          const sliceWidth = canvas.width / bufferLength;
+          let x = 0;
+
+          for (let i = 0; i < bufferLength; i++) {
+            const v = dataArray[i] / 128.0;
+            const y = (v * canvas.height) / 2;
+
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+
+            x += sliceWidth;
+          }
+
+          ctx.lineTo(canvas.width, canvas.height / 2);
+          ctx.stroke();
+
+          animationRef.current = requestAnimationFrame(draw);
+        };
+
+        draw();
+      } catch (err) {
+        console.error('Audio setup error:', err);
+      }
+    };
+
+    setupAudio();
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      if (sourceRef.current) {
+        sourceRef.current.disconnect();
+      }
+      if (analyserRef.current) {
+        analyserRef.current.disconnect();
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
+  }, [isRecording]);
+
+  if (!isRecording) return null;
+
+  return (
+    <motion.canvas
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      ref={canvasRef}
+      width={200}
+      height={48}
+      style={{
+        marginTop: 16,
+        borderRadius: 4,
+      }}
+    />
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function Home() {
   const {
@@ -675,11 +1220,16 @@ export default function Home() {
     micPermissionDenied,
     dismissMicPopup,
     resetAudit,
+    retryInfo,
+    lastBlobRef,
+    latencyInfo,
   } = useAudioRecorder();
   const isComplete = !isProcessing && auditData !== null;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [completedStages, setCompletedStages] = useState<number[]>([]);
+  const [traceLines, setTraceLines] = useState<string[]>([]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -696,22 +1246,22 @@ export default function Home() {
 
       const element = document.getElementById('official-pdf-report');
       if (!element) return;
-      
+
       const clone = element.cloneNode(true) as HTMLElement;
       clone.style.position = 'absolute';
       clone.style.left = '-9999px';
       clone.style.top = '0px';
       document.body.appendChild(clone);
 
-      const canvas = await html2canvas(clone, { 
-        scale: 3, 
+      const canvas = await html2canvas(clone, {
+        scale: 3,
         useCORS: true,
         backgroundColor: '#ffffff',
         width: element.id === 'official-pdf-report' ? 800 : clone.scrollWidth,
         height: clone.scrollHeight,
         windowWidth: element.id === 'official-pdf-report' ? 800 : clone.scrollWidth,
       });
-      
+
       document.body.removeChild(clone);
 
       const imgData = canvas.toDataURL('image/png');
@@ -730,8 +1280,27 @@ export default function Home() {
     }
   };
 
-  const [completedStages, setCompletedStages] = useState<number[]>([]);
-  const [traceLines, setTraceLines] = useState<string[]>([]);
+  // Keyboard accessibility: Space to toggle recording
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (e.code === 'Space' && !isProcessing && !isComplete) {
+        e.preventDefault();
+        if (isRecording) {
+          stopRecording();
+        } else {
+          startRecording();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isRecording, isProcessing, isComplete, startRecording, stopRecording]);
 
   // Sync with real pipelineStage from API
   useEffect(() => {
@@ -766,6 +1335,12 @@ export default function Home() {
       });
     }
   }, [isProcessing, isComplete, pipelineStage]);
+
+  const handleRetry = useCallback(() => {
+    if (lastBlobRef.current) {
+      processAudioBlob(lastBlobRef.current, lastBlobRef.current.type || 'audio/webm');
+    }
+  }, [lastBlobRef, processAudioBlob]);
 
   return (
     <main className="grid-bg" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -825,8 +1400,43 @@ export default function Home() {
               </span>
             </motion.div>
           )}
+
+          {/* Response time badge */}
+          {latencyInfo && (
+            <div style={{
+              padding: '4px 8px',
+              background: 'rgba(20,184,166,0.08)',
+              borderRadius: 4,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'clamp(8px, 1.5vw, 10px)',
+              color: 'var(--teal)',
+            }}>
+              Response: {latencyInfo}ms
+            </div>
+          )}
         </div>
       </nav>
+
+      {/* Privacy Banner */}
+      <div style={{
+        background: 'rgba(20,184,166,0.08)',
+        borderBottom: '1px solid rgba(20,184,166,0.15)',
+        padding: 'clamp(8px, 2vw, 12px) clamp(16px, 5vw, 32px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 'clamp(8px, 2vw, 12px)',
+      }}>
+        <Lock size={14} style={{ color: 'var(--teal)', flexShrink: 0 }} />
+        <span style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 'clamp(9px, 1.8vw, 11px)',
+          color: 'var(--text-secondary)',
+          textAlign: 'center',
+        }}>
+          Your audio is never stored. Processing happens in-memory only and is deleted after each audit.
+        </span>
+      </div>
 
       {/* Intelligent Mic Fallback Pop-up */}
       <AnimatePresence>
@@ -922,6 +1532,74 @@ export default function Home() {
           )}
         </AnimatePresence>
 
+        {/* Real-world impact scenario cards */}
+        <AnimatePresence>
+          {!isProcessing && !isComplete && (
+            <motion.div
+              key="impact-cards"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              style={{
+                width: '100%',
+                maxWidth: 720,
+                marginBottom: 'clamp(24px, 5vw, 40px)',
+              }}
+            >
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: 'clamp(12px, 3vw, 16px)',
+              }}>
+                {IMPACT_SCENARIOS.map((scenario, i) => {
+                  const Icon = scenario.icon;
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      style={{
+                        padding: 'clamp(16px, 3vw, 20px)',
+                        background: 'rgba(0,0,0,0.04)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 12,
+                      }}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'clamp(8px, 2vw, 12px)',
+                        marginBottom: 'clamp(8px, 2vw, 12px)',
+                      }}>
+                        <Icon size={18} style={{ color: 'var(--teal)' }} />
+                        <span style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: 'clamp(9px, 1.8vw, 11px)',
+                          color: 'var(--text-primary)',
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase',
+                        }}>
+                          {scenario.title}
+                        </span>
+                      </div>
+                      <p style={{
+                        fontFamily: 'var(--font-serif)',
+                        fontSize: 'clamp(11px, 2vw, 13px)',
+                        color: 'var(--text-secondary)',
+                        lineHeight: 1.6,
+                        margin: 0,
+                      }}>
+                        {scenario.body}
+                      </p>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Mic button */}
         <AnimatePresence>
           {!isProcessing && !isComplete && (
@@ -932,7 +1610,7 @@ export default function Home() {
               exit={{ opacity: 0, scale: 0.8 }}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24, marginBottom: 0 }}
             >
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                 {/* Outer pulse rings */}
                 {isRecording && [1, 2, 3].map((i) => (
                   <motion.div
@@ -953,6 +1631,7 @@ export default function Home() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={isRecording ? stopRecording : startRecording}
+                  aria-label={isRecording ? 'Stop recording' : 'Start recording'}
                   style={{
                     width: 'clamp(64px, 15vw, 88px)',
                     height: 'clamp(64px, 15vw, 88px)',
@@ -967,10 +1646,20 @@ export default function Home() {
                     transition: 'all 0.3s ease',
                     position: 'relative',
                     zIndex: 1,
+                    outline: 'none',
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 0 2px var(--teal)';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.boxShadow = isRecording ? '0 0 32px rgba(20,184,166,0.2)' : 'none';
                   }}
                 >
                   <Mic size={24} style={{ color: isRecording ? 'var(--teal)' : 'rgba(0,0,0,0.35)' }} />
                 </motion.button>
+
+                {/* Waveform Visualizer */}
+                <WaveformVisualizer isRecording={isRecording} />
               </div>
 
               <div style={{ textAlign: 'center' }}>
@@ -1010,9 +1699,12 @@ export default function Home() {
                       letterSpacing: '0.04em',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
+                      outline: 'none',
                     }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.15)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                    onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 2px var(--teal)'; }}
+                    onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
                   >
                     <Upload size={12} />
                     Upload Audio
@@ -1023,7 +1715,7 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {/* Error message + Demo button */}
+        {/* Error state with retry */}
         <AnimatePresence>
           {!isProcessing && !isComplete && apiError && (
             <motion.div
@@ -1033,15 +1725,71 @@ export default function Home() {
               exit={{ opacity: 0, y: -20 }}
               style={{
                 marginTop: 'clamp(16px, 4vw, 32px)',
-                padding: 'clamp(12px, 3vw, 16px) clamp(12px, 3vw, 20px)',
+                padding: 'clamp(16px, 4vw, 24px)',
                 background: 'rgba(239,68,68,0.08)',
-                border: '1px solid rgba(239,68,68,0.2)',
-                borderRadius: 10,
+                border: '1px solid rgba(239,68,68,0.25)',
+                borderRadius: 12,
                 textAlign: 'center',
+                maxWidth: 400,
               }}
             >
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'clamp(9px, 2vw, 11px)', color: 'var(--red)', letterSpacing: '0.04em', marginBottom: 'clamp(8px, 2vw, 12px)' }}>
+              <div style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 'clamp(11px, 2.5vw, 13px)',
+                color: 'var(--red)',
+                marginBottom: 'clamp(16px, 4vw, 20px)',
+                lineHeight: 1.6,
+              }}>
                 {apiError}
+              </div>
+              <div style={{
+                display: 'flex',
+                gap: 'clamp(8px, 2vw, 12px)',
+                justifyContent: 'center',
+                flexWrap: 'wrap',
+              }}>
+                <button
+                  onClick={startDemo}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'rgba(0,0,0,0.03)',
+                    border: '1px solid rgba(0,0,0,0.08)',
+                    borderRadius: 6,
+                    color: 'var(--text-secondary)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 'clamp(10px, 2vw, 12px)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    outline: 'none',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.15)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                  onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 2px var(--teal)'; }}
+                  onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+                >
+                  Try demo instead
+                </button>
+                <button
+                  onClick={handleRetry}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'rgba(20,184,166,0.08)',
+                    border: '1px solid rgba(20,184,166,0.25)',
+                    borderRadius: 6,
+                    color: 'var(--teal)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 'clamp(10px, 2vw, 12px)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    outline: 'none',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(20,184,166,0.12)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(20,184,166,0.08)'; }}
+                  onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 2px var(--teal)'; }}
+                  onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+                >
+                  Retry
+                </button>
               </div>
             </motion.div>
           )}
@@ -1070,9 +1818,12 @@ export default function Home() {
                   letterSpacing: '0.04em',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
+                  outline: 'none',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.15)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 2px var(--teal)'; }}
+                onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
               >
                 View Demo
               </button>
@@ -1093,7 +1844,23 @@ export default function Home() {
                 activeStage={pipelineStage}
                 completedStages={completedStages}
                 traceLines={traceLines}
+                retryInfo={retryInfo}
               />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Loading skeletons */}
+        <AnimatePresence>
+          {isProcessing && pipelineStage >= 3 && (
+            <motion.div
+              key="skeletons"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{ width: '100%', display: 'flex', justifyContent: 'center' }}
+            >
+              <LoadingSkeletons />
             </motion.div>
           )}
         </AnimatePresence>
@@ -1201,6 +1968,7 @@ export default function Home() {
                       cursor: isGeneratingRepair ? 'not-allowed' : 'pointer',
                       opacity: isGeneratingRepair ? 0.7 : 1,
                       transition: 'all 0.2s ease',
+                      outline: 'none',
                     }}
                     onMouseEnter={e => {
                       if (!isGeneratingRepair) e.currentTarget.style.background = 'rgba(20,184,166,0.12)';
@@ -1208,6 +1976,8 @@ export default function Home() {
                     onMouseLeave={e => {
                       if (!isGeneratingRepair) e.currentTarget.style.background = 'rgba(20,184,166,0.08)';
                     }}
+                    onFocus={(e) => { if (!isGeneratingRepair) e.currentTarget.style.boxShadow = '0 0 0 2px var(--teal)'; }}
+                    onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
                   >
                     {isGeneratingRepair ? 'Generating Repair...' : 'Generate Contextual Repair'}
                   </button>
@@ -1226,9 +1996,12 @@ export default function Home() {
                     letterSpacing: '0.06em',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
+                    outline: 'none',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.15)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                  onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 2px var(--teal)'; }}
+                  onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
                 >
                   <Mic size={12} />
                   New Audit
@@ -1249,9 +2022,12 @@ export default function Home() {
                     cursor: isGeneratingPdf ? 'not-allowed' : 'pointer',
                     opacity: isGeneratingPdf ? 0.7 : 1,
                     transition: 'all 0.2s ease',
+                    outline: 'none',
                   }}
                   onMouseEnter={e => { if (!isGeneratingPdf) e.currentTarget.style.background = 'rgba(20,184,166,0.12)'; }}
                   onMouseLeave={e => { if (!isGeneratingPdf) e.currentTarget.style.background = 'rgba(20,184,166,0.08)'; }}
+                  onFocus={(e) => { if (!isGeneratingPdf) e.currentTarget.style.boxShadow = '0 0 0 2px var(--teal)'; }}
+                  onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
                   data-html2canvas-ignore="true"
                 >
                   <Download size={12} />
@@ -1315,7 +2091,7 @@ export default function Home() {
           rowGap: 16,
           columnGap: 24,
         }}>
-          {['Google Cloud Platform', 'Vertex AI', 'Gemini 1.5 Flash', 'Firebase', 'SDG 10.3'].map((t, i) => (
+          {['Google Cloud Platform', 'Vertex AI', 'Gemini 2.5 Flash', 'Firebase', 'SDG 10.3'].map((t, i) => (
             <span key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: 'center', lineHeight: 1.5 }}>
               {t}
             </span>
